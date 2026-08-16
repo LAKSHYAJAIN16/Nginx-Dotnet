@@ -9,9 +9,11 @@ app.Map("/{**catchAll}", async (HttpContext context, IHttpClientFactory httpClie
 
     // 1. Trigger internal auth_request subrequest to C# AuthService (Port 5001)
     var authReq = new HttpRequestMessage(HttpMethod.Get, "http://localhost:5001/validate");
-    if (context.Request.Headers.TryGetValue("Authorization", out var authHeader))
+    
+    // Forward all incoming client headers to AuthService
+    foreach (var (key, value) in context.Request.Headers)
     {
-        authReq.Headers.TryAddWithoutValidation("Authorization", authHeader.ToString());
+        authReq.Headers.TryAddWithoutValidation(key, value.ToArray());
     }
 
     var authRes = await client.SendAsync(authReq);
@@ -25,10 +27,13 @@ app.Map("/{**catchAll}", async (HttpContext context, IHttpClientFactory httpClie
     // 2. Extract headers returned by AuthService
     var userId = authRes.Headers.TryGetValues("X-User-ID", out var uId) ? uId.FirstOrDefault() : null;
     var userRole = authRes.Headers.TryGetValues("X-User-Role", out var uRole) ? uRole.FirstOrDefault() : null;
+    var clientId = authRes.Headers.TryGetValues("X-Client-ID", out var cId) ? cId.FirstOrDefault() : null;
 
     // 3. Proxy request downstream to BackendService (Port 5002)
     var backendReq = new HttpRequestMessage(HttpMethod.Get, "http://localhost:5002/api/data");
     if (!string.IsNullOrEmpty(userId)) backendReq.Headers.Add("X-User-ID", userId);
+    else if (!string.IsNullOrEmpty(clientId)) backendReq.Headers.Add("X-User-ID", clientId);
+
     if (!string.IsNullOrEmpty(userRole)) backendReq.Headers.Add("X-User-Role", userRole);
 
     var backendRes = await client.SendAsync(backendReq);
