@@ -4,7 +4,25 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>NginxDotNet.Core</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Lakshya Jain</Authors>
+    <Company>NginxDotNet</Company>
+    <Description>High-performance NGINX &amp; Envoy authentication subrequest, rate-limiting, caching, and header-transformation gateway adaptors for C# .NET 9.</Description>
+    <PackageTags>nginx;dotnet;auth;gateway;proxy;reverse-proxy;openresty;jwt;rate-limiting;envoy;subrequest</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/LAKSHYAJAIN16/Nginx-Dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/LAKSHYAJAIN16/Nginx-Dotnet</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />

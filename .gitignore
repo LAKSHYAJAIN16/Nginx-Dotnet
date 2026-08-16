@@ -5,6 +5,10 @@
 .idea/
 .vscode/
 
+# NuGet outputs
+nupkg/
+*.nupkg
+
 # OS metadata
 .DS_Store
 Thumbs.db

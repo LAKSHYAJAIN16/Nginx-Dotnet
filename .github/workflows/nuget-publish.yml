@@ -1,0 +1,47 @@
+name: Publish NuGet Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 9 SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore Dependencies
+      run: dotnet restore NginxDotNet.Core/NginxDotNet.Core.csproj
+
+    - name: Build Project
+      run: dotnet build NginxDotNet.Core/NginxDotNet.Core.csproj -c Release --no-restore
+
+    - name: Run Unit Tests
+      run: dotnet test NginxDotNet.Tests/NginxDotNet.Tests.csproj -c Release
+
+    - name: Pack NuGet Package
+      run: dotnet pack NginxDotNet.Core/NginxDotNet.Core.csproj -c Release -o ./nupkg
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nupkg
+        path: ./nupkg/*.nupkg
+
+    # Publish to GitHub Packages
+    - name: Push to GitHub Packages
+      run: dotnet nuget push ./nupkg/*.nupkg --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+    # Publish to NuGet.org (Optional: requires NUGET_API_KEY secret)
+    # - name: Push to NuGet.org
+    #   run: dotnet nuget push ./nupkg/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate

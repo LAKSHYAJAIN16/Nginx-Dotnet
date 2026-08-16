@@ -1,8 +1,26 @@
-# ngx-dotnet-auth (`Nginx-Dotnet`)
+# NginxDotNet.Core
 
-A high-performance, modular **NGINX + C# (.NET 9)** authorization subrequest & reverse proxy gateway framework.
+[![Publish NuGet Package](https://github.com/LAKSHYAJAIN16/Nginx-Dotnet/actions/workflows/nuget-publish.yml/badge.svg)](https://github.com/LAKSHYAJAIN16/Nginx-Dotnet/actions/workflows/nuget-publish.yml)
+[![NuGet Package](https://img.shields.io/badge/nuget-v1.0.0-blue)](https://github.com/LAKSHYAJAIN16/Nginx-Dotnet)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Similar to how OpenResty (`lua-nginx-module`) embeds Lua into NGINX, `ngx-dotnet-auth` pairs NGINX's native `auth_request` subrequest pipeline with pluggable **C# .NET 9 Adaptors** for JWT validation, API Key authentication, in-memory caching, rate limiting, and claim-to-header transformation.
+High-performance **NGINX & Envoy** authentication subrequest, rate-limiting, caching, and header-transformation gateway framework for **C# .NET 9**.
+
+Similar to how OpenResty (`lua-nginx-module`) embeds Lua into NGINX, `NginxDotNet.Core` pairs NGINX's native `auth_request` subrequest pipeline and Envoy's `ext_authz` filter with pluggable **C# .NET 9 Adaptors** for JWT validation, API Key authentication, in-memory caching, rate limiting, and claim-to-header transformation.
+
+---
+
+## 📦 Installation via NuGet
+
+### .NET CLI
+```bash
+dotnet add package NginxDotNet.Core --version 1.0.0
+```
+
+### Package Manager Console
+```powershell
+Install-Package NginxDotNet.Core -Version 1.0.0
+```
 
 ---
 
@@ -61,66 +79,58 @@ Similar to how OpenResty (`lua-nginx-module`) embeds Lua into NGINX, `ngx-dotnet
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Usage Example in C#
 
-### 1. Build & Run Unit Tests
-```bash
-dotnet test NginxDotNet.Tests/NginxDotNet.Tests.csproj
-```
+```csharp
+using NginxDotNet.Core.Adaptors.Auth;
+using NginxDotNet.Core.Adaptors.Cache;
+using NginxDotNet.Core.Adaptors.RateLimit;
 
-### 2. Start AuthService (Port 5001)
-```bash
-dotnet run --project AuthService
-```
+var builder = WebApplication.CreateSlimBuilder(args);
 
-### 3. Start BackendService (Port 5002)
-```bash
-dotnet run --project BackendService
-```
+// Register NginxDotNet Core Adaptors
+builder.Services.AddSingleton<ICacheAdaptor, MemoryCacheAdaptor>();
+builder.Services.AddSingleton<IRateLimiterAdaptor, RateLimiterAdaptor>();
+builder.Services.AddSingleton<JwtBearerAdaptor>();
+builder.Services.AddSingleton<ApiKeyAdaptor>();
 
-### 4. Start ProxyService / NGINX (Port 8080)
-```bash
-# If using NGINX:
-nginx -c /path/to/nginx.conf
+var app = builder.Build();
 
-# Or if testing locally without NGINX binary:
-dotnet run --project ProxyService
+app.MapGet("/validate", async (HttpContext context, 
+    JwtBearerAdaptor jwtAdaptor, 
+    ApiKeyAdaptor apiKeyAdaptor,
+    ICacheAdaptor cache) =>
+{
+    var headers = context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString(), StringComparer.OrdinalIgnoreCase);
+
+    // Run Adaptors
+    var result = await jwtAdaptor.AuthenticateAsync(headers, context.Request.Path);
+    if (result.IsSuccess)
+    {
+        foreach (var (k, v) in result.Headers) context.Response.Headers[k] = v;
+        return Results.Ok();
+    }
+
+    return Results.Unauthorized();
+});
+
+app.Run();
 ```
 
 ---
 
-## 🧪 Testing with `curl`
+## 🛠️ Building & Packaging Locally
 
-### 1. JWT Bearer Token Request (Authorized)
 ```bash
-curl -i -H "Authorization: Bearer <YOUR_JWT_TOKEN>" http://localhost:8080/api/data
-```
+# Build & Test
+dotnet test
 
-### 2. API Key Request (Authorized)
-```bash
-curl -i -H "X-API-Key: secret-api-key-123" http://localhost:8080/api/data
+# Create NuGet Package (.nupkg)
+dotnet pack NginxDotNet.Core/NginxDotNet.Core.csproj -c Release -o ./nupkg
 ```
-
-### 3. Missing / Invalid Token (Unauthorized)
-```bash
-curl -i http://localhost:8080/api/data
-```
-**Response:** `HTTP/1.1 401 Unauthorized`
 
 ---
 
-## 📂 Project Structure
+## 📄 License
 
-```
-├── NginxDotNet.Core/          # Core Adaptor Library & Interfaces
-│   ├── Abstractions/          # IAuthAdaptor, ICacheAdaptor, IRateLimiterAdaptor
-│   ├── Adaptors/              # JwtBearerAdaptor, ApiKeyAdaptor, MemoryCacheAdaptor, RateLimiterAdaptor
-│   └── Models/                # AuthResult model
-├── NginxDotNet.Tests/         # xUnit Automated Unit Test Suite
-├── AuthService/               # High-Performance C# Gateway Subrequest API
-├── BackendService/            # Sample Downstream Microservice
-├── ProxyService/              # NGINX-simulated Proxy for environments without NGINX installed
-├── nginx.conf                 # NGINX production configuration (auth_request)
-├── envoy.yaml                 # Envoy production configuration (ext_authz filter)
-└── docker-compose.yml         # Container orchestration setup
-```
+Distributed under the [MIT License](LICENSE).
