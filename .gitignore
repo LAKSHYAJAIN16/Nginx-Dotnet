@@ -1,0 +1,13 @@
+# .NET build files
+[Bb]in/
+[Oo]bj/
+.vs/
+.idea/
+.vscode/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
